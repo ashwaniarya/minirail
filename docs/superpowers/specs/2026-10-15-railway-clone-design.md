@@ -1,6 +1,6 @@
 # minirail: a personal Railway clone on DigitalOcean Kubernetes
 
-Date: 2026-10-15 · Status: design approved, spec awaiting review
+Date: 2026-10-15 · Status: approved
 
 ## 1. Intent
 
@@ -70,19 +70,19 @@ Two root modules, because Kubernetes and Helm providers cannot be configured rel
 **Stage 1, `infra/cloud`:**
 
 - VPC; DOKS cluster, version from `digitalocean_kubernetes_versions` (prefix variable); node pool `s-2vcpu-4gb`, autoscale 2–4.
-- Container registry, tier variable (default `basic`, 5 repos = 5 apps); write-enabled docker credentials resource.
+- Container registry, tier variable (default `basic`, 5 repos = minirail + 4 apps); write-enabled docker credentials resource.
 - `digitalocean_domain` for `apps.<domain>`; `digitalocean_certificate` type `lets_encrypt` for `*.apps.<domain>` and `apps.<domain>`.
 - Managed Postgres (`db-s-1vcpu-1gb`, version variable) with firewall rule allowing only the DOKS cluster. Managed Valkey behind `enable_valkey` (default false), same firewall.
 - Outputs: cluster name, registry endpoint, docker config (sensitive), cert name, PG admin URI (sensitive), Valkey URI (sensitive, nullable).
 
-**Between stages, `make image`:** logs Docker into DOCR with the stage-1 docker config (temp `DOCKER_CONFIG`, no doctl), builds `build/Dockerfile` for `linux/amd64`, pushes `<registry>/minirail:<git-sha>`.
+**Between stages, `make image`:** logs Docker into DOCR with the stage-1 docker config (temp `DOCKER_CONFIG` with the host's `cli-plugins` symlinked in, `DOCKER_HOST` taken from the active docker context, no doctl), builds `build/Dockerfile` for `linux/amd64` with buildx, pushes `<registry>/minirail:<IMAGE_TAG>` (default: 12-char git SHA).
 
 **Stage 2, `infra/platform`:**
 
 - Namespaces `minirail` (control plane) and `apps` (user workloads).
 - Traefik Helm release (chart version pinned at implementation), 2 replicas, IngressClass `traefik`. Service annotations: `do-loadbalancer-certificate-name` (name survives LE renewals, ID does not), `do-loadbalancer-tls-ports: "443"`, `do-loadbalancer-protocol: http`, `do-loadbalancer-redirect-http-to-https: "true"`. Port 443 targets Traefik's `web` entrypoint, since TLS ends at the LB. Forwarded headers trusted from the VPC CIDR only.
 - After Helm waits for the LB IP: `digitalocean_record` `*` and `@` A records in the apps zone.
-- Secrets in `apps`: `registry` (dockerconfigjson, used for push and pull), `github-token` (read by the clone step), `valkey` (`REDIS_URL`, only when enabled). Secrets in `minirail`: `github-token` (for `git ls-remote`), `webhook-secret` (random), `admin-password` (random, output sensitive), `pg-admin`.
+- Secrets in `apps`: `registry` (dockerconfigjson, used for push and pull), `github-token` (key `token`, read by the clone step), `valkey` (`REDIS_URL`, only when enabled). Secrets in `minirail`: `registry` (image pull) and one combined Secret `minirail` holding `GITHUB_TOKEN`, `WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `PG_ADMIN_URL`. Webhook secret and admin password are random; their outputs are sensitive.
 - Control plane: ServiceAccount, Role + RoleBinding scoped to namespace `apps` only (configmaps, secrets, deployments, services, ingresses, jobs, cronjobs, pods, pods/log), Deployment (1 replica), Service, Ingress `console.apps.<domain>`.
 
 `make up` = stage 1 apply → image → stage 2 apply. `make down` = reverse order.
@@ -117,15 +117,15 @@ Name rule: DNS-1123 label, 1–30 chars, not `console`, `www` or `minirail`. Val
 | `worker` | Deployment | no | set Deployment image |
 | `cron` | CronJob, `concurrencyPolicy: Forbid` | no | set CronJob image; next run uses it |
 
-Workloads are created on the first successful build and updated by server-side apply afterwards. Fixed defaults: requests 100m / 128Mi, memory limit 512Mi, `imagePullSecrets: registry`.
+Workloads are created on the first successful build and updated afterwards by an upsert (create, or get then update). Fixed defaults: requests 100m / 128Mi, memory limit 512Mi, `imagePullSecrets: registry`.
 
 ### 5.3 Build pipeline
 
 1. Trigger resolves the commit SHA: webhook payload `after`, or `git ls-remote <repo> <branch>` for Redeploy.
-2. Control plane creates Job `<name>-build-<sha7>` in `apps`: `backoffLimit: 0`, `activeDeadlineSeconds: 1800`, `ttlSecondsAfterFinished: 86400`, labels `paas/app`, `paas/kind=build`, annotation `paas/sha`. An existing Job with that name (same SHA) makes the trigger a no-op.
+2. Control plane creates Job `<name>-build-<sha7>` in `apps`: `backoffLimit: 0`, `activeDeadlineSeconds: 1800`, `ttlSecondsAfterFinished: 86400`, labels `paas/app`, `paas/kind=build`, annotation `paas/sha`. The trigger is skipped when the SHA equals the deployed SHA or a Job for it is still running. A finished Job for the same SHA is deleted and recreated, so a force-push back to an old SHA redeploys.
 3. Init `clone` (control-plane image, which ships `git` and the `railpack` binary): shallow fetch of the exact SHA into an `emptyDir`. Token supplied by a git credential helper reading `GITHUB_TOKEN` from Secret `github-token` in `apps`; the token never appears in args or the pod spec.
 4. Init `prepare`: if `<root>/Dockerfile` exists, skip; else `railpack prepare <root> --plan-out /work/plan/railpack-plan.json --info-out /work/plan/railpack-info.json`. Exit code 1 fails the build with Railpack's logs.
-5. Main `build`: `moby/buildkit:v0.34.0-rootless` with `buildctl-daemonless.sh`, seccomp and AppArmor `Unconfined`, UID 1000, `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`. Frontend `dockerfile.v0`, or `gateway.v0` with `source=ghcr.io/railwayapp/railpack-frontend:<pinned>` when a plan exists. Output `type=image,name=<registry>/<name>:<sha>,push=true`; cache `type=registry,ref=<registry>/<name>:buildcache,mode=max`. Registry auth from Secret `registry` mounted as `/home/user/.docker/config.json`. Limits 2 CPU / 3Gi.
+5. Main `build`: `moby/buildkit:v0.33.1-rootless` with `buildctl-daemonless.sh`, seccomp and AppArmor `Unconfined`, UID 1000, `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`. Frontend `dockerfile.v0`, or `gateway.v0` with `source=ghcr.io/railwayapp/railpack-frontend:<pinned>` when a plan exists. Output `type=image,name=<registry>/<name>:<sha>,push=true`; cache `type=registry,ref=<registry>/<name>:buildcache,mode=max`. Registry auth from Secret `registry` mounted as `/home/user/.docker/config.json`. Limits 2 CPU / 3Gi.
 
 Railpack CLI and frontend versions are pinned to the same release (the frontend must match the CLI that wrote the plan). Pick the newest release at least two weeks old at implementation time.
 
@@ -147,7 +147,7 @@ Dashboard (server-rendered `html/template`, HTTP basic auth, user `admin`):
 | `POST /apps/{name}/run` | `cron` only: one-off Job from the CronJob template |
 | `POST /apps/{name}/attach/{postgres,valkey}` | attach a database |
 | `POST /apps/{name}/delete` | delete every object labelled `paas/app=<name>`; the database is kept |
-| `GET /apps/{name}/logs?source=build\|runtime` | Server-Sent Events stream: build = Job pod containers in order; runtime = newest pod (web/worker) or last Job (cron), `tailLines=200`, follow |
+| `GET /apps/{name}/logs?source=build\|runtime` | Server-Sent Events stream: build = Job pod containers in order; runtime = newest non-build pod of the app (web/worker pod, or the cron Job's pod), `tailLines=200`, follow |
 | `POST /webhook/github` | no basic auth; `X-Hub-Signature-256` HMAC check against `webhook-secret` (constant-time); `push` events only; builds every app whose repo + branch match (monorepo services share one repo) |
 | `GET /healthz` | liveness |
 
@@ -189,7 +189,7 @@ Valkey attach adds the shared `valkey` Secret (`REDIS_URL`) to `envFrom`. Apps s
 | 🎭 Behavioural | HTTP handlers and the reconcile loop against `client-go` fake clientset: create app → trigger → mark Job succeeded → reconcile → Deployment image set; failed Job leaves image unchanged; webhook matching across two apps on one repo |
 | 💨 Smoke | `go test ./...`; `terraform fmt -check` + `validate` for both stages (via `hashicorp/terraform` Docker image, since terraform is not installed locally); `scripts/smoke.sh` after `make up`: create a sample web app, wait for build, `curl` its HTTPS URL for 200 |
 
-Postgres provisioning SQL is covered by the smoke test against the real managed cluster, not mocked.
+Postgres provisioning SQL is not mocked. It is covered by the opt-in `TestProvisionAgainstRealPostgres` (runs when `MINIRAIL_TEST_PG_URL` is set, e.g. against a local `postgres:17` container) and by the smoke test against the real managed cluster.
 
 ## 9. Defaults and cost
 
