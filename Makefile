@@ -1,8 +1,7 @@
 TF_IMAGE := hashicorp/terraform:1.16.4
 IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
-export TF_VAR_image_tag := $(IMAGE_TAG)
 
-tf = docker run --rm -i -v "$(CURDIR)":/work -w /work/infra/$(1) -e DIGITALOCEAN_TOKEN -e TF_VAR_domain -e TF_VAR_github_token -e TF_VAR_image_tag $(TF_IMAGE)
+tf = docker run --rm -i -v "$(CURDIR)":/work -w /work/infra/$(1) -e DIGITALOCEAN_TOKEN -e TF_VAR_domain -e TF_VAR_github_token $(TF_IMAGE)
 
 .PHONY: check up image smoke down
 
@@ -11,7 +10,7 @@ check:
 	go test ./...
 	docker run --rm -v "$(CURDIR)":/work -w /work $(TF_IMAGE) fmt -check -recursive infra
 	for stage in cloud platform; do \
-		$(call tf,$$stage) init -backend=false -input=false >/dev/null && $(call tf,$$stage) validate || exit 1; \
+		$(call tf,$$stage) init -backend=false -input=false >/dev/null && $(call tf,$$stage) validate && $(call tf,$$stage) test || exit 1; \
 	done
 
 up:
@@ -30,7 +29,9 @@ image:
 	registry=$$($(call tf,cloud) output -raw registry_endpoint); \
 	docker_host=$$(docker context inspect --format '{{.Endpoints.docker.Host}}'); \
 	DOCKER_CONFIG="$$config_dir" DOCKER_HOST="$$docker_host" \
-		docker buildx build --platform linux/amd64 -f build/Dockerfile -t "$$registry/minirail:$(IMAGE_TAG)" --push .
+		docker buildx build --platform linux/amd64 -f build/Dockerfile -t "$$registry/minirail:$(IMAGE_TAG)" --metadata-file "$$config_dir/metadata.json" --push .; \
+	digest=$$(sed -n 's/.*"containerimage.digest": *"\(sha256:[0-9a-f]*\)".*/\1/p' "$$config_dir/metadata.json"); \
+	printf '{"image_digest": "%s"}\n' "$$digest" > infra/platform/image.auto.tfvars.json
 
 smoke:
 	CONSOLE_URL=$$($(call tf,platform) output -raw console_url) \

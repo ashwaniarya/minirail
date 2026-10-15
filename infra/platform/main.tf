@@ -1,6 +1,6 @@
 locals {
   console_host  = "console.${local.cloud.apps_domain}"
-  control_image = "${local.cloud.registry_endpoint}/minirail:${var.image_tag}"
+  control_image = "${local.cloud.registry_endpoint}/minirail@${var.image_digest}"
 }
 
 resource "kubernetes_namespace_v1" "main" {
