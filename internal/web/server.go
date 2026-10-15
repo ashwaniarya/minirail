@@ -108,5 +108,5 @@ func (s *Server) appURL(app apps.App) string {
 	if app.Type != apps.Web {
 		return ""
 	}
-	return "https://" + apps.Host(app.Name, s.Config.Domain)
+	return s.Config.Scheme + "://" + apps.Host(app.Name, s.Config.Domain)
 }

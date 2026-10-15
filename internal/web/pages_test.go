@@ -18,6 +18,15 @@ func createForm(name, repo string) url.Values {
 	return url.Values{"name": {name}, "repo": {repo}, "branch": {"main"}, "type": {"web"}, "port": {"8080"}, "replicas": {"1"}, "root": {"."}}
 }
 
+func TestIndexLinksAppsWithTheConfiguredScheme(t *testing.T) {
+	server, _ := newTestServer(t, testApp())
+	server.Config.Scheme = "http"
+	body := serve(server, httptest.NewRequest(http.MethodGet, "/", nil)).Body.String()
+	if !strings.Contains(body, "http://hello.apps.example.com") {
+		t.Fatalf("index lacks the http app URL\n%s", body)
+	}
+}
+
 func TestIndexListsAppsWithURLAndBuildStatus(t *testing.T) {
 	server, _ := newTestServer(t, testApp())
 	if _, err := server.Builder.Trigger(context.Background(), testApp(), shaA); err != nil {

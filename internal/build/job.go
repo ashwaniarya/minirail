@@ -37,9 +37,9 @@ else
   set -- --frontend=dockerfile.v0 --local context="$CTX" --local dockerfile="$CTX"
 fi
 exec buildctl-daemonless.sh build "$@" \
-  --output "type=image,name=$IMAGE,push=true" \
-  --export-cache "type=registry,ref=$CACHE,mode=max" \
-  --import-cache "type=registry,ref=$CACHE"
+  --output "type=image,name=$IMAGE,push=true$REGISTRY_OPTS" \
+  --export-cache "type=registry,ref=$CACHE,mode=max$REGISTRY_OPTS" \
+  --import-cache "type=registry,ref=$CACHE$REGISTRY_OPTS"
 `
 
 func JobName(appName, sha string) string { return appName + "-build-" + sha[:7] }
@@ -49,6 +49,10 @@ func CacheRef(registry, appName string) string { return registry + "/" + appName
 func NewJob(config apps.Config, app apps.App, sha string) *batchv1.Job {
 	labels := map[string]string{apps.LabelApp: app.Name, apps.LabelKind: KindBuild}
 	work := corev1.VolumeMount{Name: "work", MountPath: "/work"}
+	registryOpts := ""
+	if config.RegistryInsecure {
+		registryOpts = ",registry.insecure=true"
+	}
 	unconfined := &corev1.SecurityContext{
 		RunAsUser:       ptr.To[int64](1000),
 		RunAsGroup:      ptr.To[int64](1000),
@@ -106,6 +110,7 @@ func NewJob(config apps.Config, app apps.App, sha string) *batchv1.Job {
 							{Name: "IMAGE", Value: apps.ImageRef(config.Registry, app.Name, sha)},
 							{Name: "CACHE", Value: CacheRef(config.Registry, app.Name)},
 							{Name: "RAILPACK_FRONTEND", Value: config.RailpackFrontend},
+							{Name: "REGISTRY_OPTS", Value: registryOpts},
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("250m"), corev1.ResourceMemory: resource.MustParse("512Mi")},

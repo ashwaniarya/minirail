@@ -65,7 +65,7 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 		Env:         apps.FormatEnv(env),
 		Builds:      builds,
 		Pods:        podRows,
-		WebhookURL:  "https://" + apps.Host("console", s.Config.Domain) + "/webhook/github",
+		WebhookURL:  s.Config.Scheme + "://" + apps.Host("console", s.Config.Domain) + "/webhook/github",
 		CanPostgres: s.Provision != nil,
 		CanValkey:   s.Config.ValkeyEnabled,
 	})

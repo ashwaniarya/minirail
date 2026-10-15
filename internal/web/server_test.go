@@ -20,6 +20,7 @@ func testConfig() apps.Config {
 	return apps.Config{
 		Namespace:        "apps",
 		Domain:           "apps.example.com",
+		Scheme:           "https",
 		Registry:         "registry.digitalocean.com/acme",
 		ControlImage:     "registry.digitalocean.com/acme/minirail:abc",
 		BuildkitImage:    "moby/buildkit:v0.33.1-rootless",
