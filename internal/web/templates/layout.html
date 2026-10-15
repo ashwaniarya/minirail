@@ -1,0 +1,21 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minirail</title>
+<style>
+body { font: 15px/1.5 system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 16px; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border-bottom: 1px solid #ddd; padding: 6px; text-align: left; }
+textarea { width: 100%; font-family: ui-monospace, monospace; }
+pre { background: #111; color: #eee; padding: 12px; overflow-x: auto; max-height: 480px; }
+form.inline { display: inline; }
+.error { color: #b00020; }
+</style>
+</head>
+<body>
+<header><a href="/">Apps</a> · <a href="/apps/new">New app</a></header>
+{{template "content" .}}
+</body>
+</html>{{end}}
