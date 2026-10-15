@@ -4,7 +4,7 @@
 set -eu
 : "${CONSOLE_URL:?}" "${ADMIN_PASSWORD:?}" "${APPS_DOMAIN:?}" "${SMOKE_REPO:?}"
 
-app_url="https://hello.$APPS_DOMAIN"
+app_url="${CONSOLE_URL%%://*}://hello.$APPS_DOMAIN"
 
 console() {
 	curl -fsS -u "admin:$ADMIN_PASSWORD" -o /dev/null "$@"
