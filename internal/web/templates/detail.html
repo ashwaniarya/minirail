@@ -1,0 +1,55 @@
+{{define "content"}}
+<h1>{{.App.Name}}</h1>
+<p>{{.App.Type}} · {{.App.Repo}} @ {{.App.Branch}} · root {{.App.Root}}{{if .URL}} · <a href="{{.URL}}">{{.URL}}</a>{{end}}</p>
+<p>Deployed: {{if .App.DeployedSHA}}{{short .App.DeployedSHA}}{{else}}not yet{{end}}</p>
+<form class="inline" method="post" action="/apps/{{.App.Name}}/deploy"><button>Deploy branch head</button></form>
+{{if eq .App.Type "cron"}}<form class="inline" method="post" action="/apps/{{.App.Name}}/run"><button>Run now</button></form>{{end}}
+
+<h2>Environment</h2>
+<form method="post" action="/apps/{{.App.Name}}/env">
+<textarea name="env" rows="8" placeholder="KEY=value">{{.Env}}</textarea>
+<button>Save and restart</button>
+</form>
+
+<h2>Databases</h2>
+{{if .App.Postgres}}<p>Postgres attached (DATABASE_URL).</p>{{else if .CanPostgres}}<form method="post" action="/apps/{{.App.Name}}/attach/postgres"><button>Attach Postgres</button></form>{{end}}
+{{if .App.Valkey}}<p>Valkey attached (REDIS_URL).</p>{{else if .CanValkey}}<form method="post" action="/apps/{{.App.Name}}/attach/valkey"><button>Attach Valkey</button></form>{{end}}
+{{if or .App.Valkey .CanValkey}}<p>Valkey is shared by all apps: prefix your keys with the app name.</p>{{end}}
+
+<h2>Builds</h2>
+<table>
+<tr><th>Commit</th><th>Status</th><th>Started</th></tr>
+{{range .Builds}}<tr><td>{{short (index .Annotations "paas/sha")}}</td><td>{{buildStatus .}}</td><td>{{.CreationTimestamp}}</td></tr>{{end}}
+</table>
+
+<h2>Pods</h2>
+<table>
+<tr><th>Name</th><th>Phase</th><th>Restarts</th></tr>
+{{range .Pods}}<tr><td>{{.Name}}</td><td>{{.Phase}}</td><td>{{.Restarts}}</td></tr>{{end}}
+</table>
+
+<h2>Logs</h2>
+<button onclick="showLogs('build')">Build logs</button>
+<button onclick="showLogs('runtime')">Runtime logs</button>
+<pre id="logs"></pre>
+<script>
+let logSource;
+function showLogs(source) {
+  if (logSource) logSource.close();
+  const output = document.getElementById("logs");
+  output.textContent = "";
+  logSource = new EventSource("/apps/{{.App.Name}}/logs?source=" + source);
+  logSource.onmessage = (event) => { output.textContent += event.data + "\n"; output.scrollTop = output.scrollHeight; };
+  logSource.addEventListener("end", () => logSource.close());
+  logSource.onerror = () => logSource.close();
+}
+</script>
+
+<h2>Auto-deploy</h2>
+<p>In GitHub: Settings → Webhooks → Add webhook. Payload URL <code>{{.WebhookURL}}</code>, content type <code>application/json</code>, secret = the <code>webhook_secret</code> Terraform output, event: push.</p>
+
+<h2>Delete</h2>
+<form method="post" action="/apps/{{.App.Name}}/delete" onsubmit="return confirm('Delete {{.App.Name}}? The database is kept.')">
+<button>Delete app</button>
+</form>
+{{end}}

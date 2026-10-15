@@ -48,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	dashboard.HandleFunc("GET /{$}", s.index)
 	dashboard.HandleFunc("GET /apps/new", s.newForm)
 	dashboard.HandleFunc("POST /apps/new", s.create)
+	dashboard.HandleFunc("GET /apps/{name}", s.detail)
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
