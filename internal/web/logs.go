@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"time"
 
 	"minirail/internal/apps"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 )
 
@@ -36,6 +39,10 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	flusher := http.NewResponseController(w)
 	pods := s.Store.Client.CoreV1().Pods(s.Config.Namespace)
 	for _, container := range containers {
+		if err := s.waitForStart(ctx, podName, container); err != nil {
+			fmt.Fprintf(w, "data: [%s] %v\n\n", container, err)
+			break
+		}
 		stream, err := pods.GetLogs(podName, &corev1.PodLogOptions{Container: container, Follow: true, TailLines: ptr.To[int64](200)}).Stream(ctx)
 		if err != nil {
 			fmt.Fprintf(w, "data: [%s] %v\n\n", container, err)
@@ -52,6 +59,25 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, "event: end\ndata: \n\n")
 	flusher.Flush()
+}
+
+func (s *Server) waitForStart(ctx context.Context, podName, container string) error {
+	pods := s.Store.Client.CoreV1().Pods(s.Config.Namespace)
+	return wait.PollUntilContextCancel(ctx, 500*time.Millisecond, true, func(ctx context.Context) (bool, error) {
+		pod, err := pods.Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			return true, nil
+		}
+		for _, status := range slices.Concat(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses) {
+			if status.Name == container {
+				return status.State.Running != nil || status.State.Terminated != nil || status.LastTerminationState.Terminated != nil, nil
+			}
+		}
+		return false, nil
+	})
 }
 
 func (s *Server) logTarget(ctx context.Context, app apps.App, source string) (string, []string, error) {
