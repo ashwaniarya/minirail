@@ -1,0 +1,80 @@
+{
+  "cronJob": {
+    "metadata": {
+      "name": "hello",
+      "namespace": "apps",
+      "labels": {
+        "paas/app": "hello"
+      }
+    },
+    "spec": {
+      "schedule": "0 3 * * *",
+      "concurrencyPolicy": "Forbid",
+      "jobTemplate": {
+        "metadata": {
+          "labels": {
+            "paas/app": "hello",
+            "paas/kind": "cron"
+          }
+        },
+        "spec": {
+          "backoffLimit": 0,
+          "template": {
+            "metadata": {
+              "labels": {
+                "paas/app": "hello",
+                "paas/kind": "cron"
+              },
+              "annotations": {
+                "paas/restarted-at": "2026-10-15T00:00:00Z"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "app",
+                  "image": "registry.digitalocean.com/acme/hello:abc",
+                  "envFrom": [
+                    {
+                      "secretRef": {
+                        "name": "hello-env",
+                        "optional": true
+                      }
+                    },
+                    {
+                      "secretRef": {
+                        "name": "hello-db",
+                        "optional": true
+                      }
+                    },
+                    {
+                      "secretRef": {
+                        "name": "valkey"
+                      }
+                    }
+                  ],
+                  "resources": {
+                    "limits": {
+                      "memory": "512Mi"
+                    },
+                    "requests": {
+                      "cpu": "100m",
+                      "memory": "128Mi"
+                    }
+                  }
+                }
+              ],
+              "restartPolicy": "Never",
+              "imagePullSecrets": [
+                {
+                  "name": "registry"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "status": {}
+  }
+}

@@ -75,7 +75,7 @@ Two root modules, because Kubernetes and Helm providers cannot be configured rel
 - Managed Postgres (`db-s-1vcpu-1gb`, version variable) with firewall rule allowing only the DOKS cluster. Managed Valkey behind `enable_valkey` (default false), same firewall.
 - Outputs: cluster name, registry endpoint, docker config (sensitive), cert name, PG admin URI (sensitive), Valkey URI (sensitive, nullable).
 
-**Between stages, `make image`:** logs Docker into DOCR with the stage-1 docker config (temp `DOCKER_CONFIG` with the host's `cli-plugins` symlinked in, `DOCKER_HOST` taken from the active docker context, no doctl), builds `build/Dockerfile` for `linux/amd64` with buildx, pushes `<registry>/minirail:<IMAGE_TAG>` (default: 12-char git SHA).
+**Between stages, `make image`:** logs Docker into DOCR with the stage-1 docker config (temp `DOCKER_CONFIG` with the host's `cli-plugins` symlinked in, `DOCKER_HOST` taken from the active docker context, no doctl), builds `build/Dockerfile` for `linux/amd64` with buildx, pushes `<registry>/minirail:<IMAGE_TAG>` (default: 12-char git SHA), and writes the pushed digest to `infra/platform/image.auto.tfvars.json`. Stage 2 runs the control plane (and the build Jobs' clone/prepare steps) as `<registry>/minirail@<digest>`, never by tag: every build holds a registry-wide write credential, so a tag could be overwritten by a deployed repo.
 
 **Stage 2, `infra/platform`:**
 
@@ -107,7 +107,7 @@ An app is a ConfigMap `<name>-app` in namespace `apps`, label `paas/app=<name>`,
 
 Env vars: Secret `<name>-env`. Database URL: Secret `<name>-db`, kept separate so editing env never clobbers it. Workloads load both via `envFrom`, plus `valkey` when attached.
 
-Name rule: DNS-1123 label, 1–30 chars, not `console`, `www` or `minirail`. Validated server-side before any object is created.
+Name rule: DNS-1035 label (starts with a letter, since it also names the Service), 1–30 chars, not `console`, `www` or `minirail`. Validated server-side before any object is created.
 
 ### 5.2 Workloads per type
 
