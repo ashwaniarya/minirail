@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,6 +49,53 @@ func TestRestartSkipsUndeployedAppAndReusesDeployedImage(t *testing.T) {
 	deployment, _ := client.AppsV1().Deployments("apps").Get(ctx, "hello", metav1.GetOptions{})
 	if image := deployment.Spec.Template.Spec.Containers[0].Image; image != "registry.digitalocean.com/acme/hello:abc" {
 		t.Fatalf("image = %q", image)
+	}
+}
+
+func TestOnlyRestartStampsRestartedAt(t *testing.T) {
+	const seeded = "2020-01-01T00:00:00Z"
+	ctx := context.Background()
+	store, client := newTestStore(t)
+	web, nightly := validWeb(), validWeb()
+	nightly.Name, nightly.Type, nightly.Schedule = "nightly", Cron, "0 3 * * *"
+	web.DeployedSHA, nightly.DeployedSHA = "abc", "abc"
+	eachApp := func(step func(App) error) {
+		for _, app := range []App{web, nightly} {
+			if err := step(app); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	applyDeployed := func(app App) error {
+		return store.Apply(ctx, app, ImageRef(store.Config.Registry, app.Name, app.DeployedSHA))
+	}
+	deployments, cronJobs := client.AppsV1().Deployments("apps"), client.BatchV1().CronJobs("apps")
+	templates := func() (*appsv1.Deployment, *batchv1.CronJob) {
+		deployment, _ := deployments.Get(ctx, web.Name, metav1.GetOptions{})
+		cronJob, _ := cronJobs.Get(ctx, nightly.Name, metav1.GetOptions{})
+		return deployment, cronJob
+	}
+	stamps := func() (string, string) {
+		deployment, cronJob := templates()
+		return deployment.Spec.Template.Annotations[AnnotationRestartedAt], cronJob.Spec.JobTemplate.Spec.Template.Annotations[AnnotationRestartedAt]
+	}
+	eachApp(applyDeployed)
+	deployment, cronJob := templates()
+	deployment.Spec.Template.Annotations[AnnotationRestartedAt] = seeded
+	cronJob.Spec.JobTemplate.Spec.Template.Annotations[AnnotationRestartedAt] = seeded
+	if _, err := deployments.Update(ctx, deployment, metav1.UpdateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cronJobs.Update(ctx, cronJob, metav1.UpdateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	eachApp(applyDeployed)
+	if webStamp, cronStamp := stamps(); webStamp != seeded || cronStamp != seeded {
+		t.Fatalf("apply re-stamped restarted-at: web %q cron %q", webStamp, cronStamp)
+	}
+	eachApp(func(app App) error { return store.Restart(ctx, app) })
+	if webStamp, cronStamp := stamps(); webStamp == seeded || cronStamp == seeded {
+		t.Fatalf("restart kept old restarted-at: web %q cron %q", webStamp, cronStamp)
 	}
 }
 

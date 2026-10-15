@@ -7,6 +7,7 @@ import (
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -14,6 +15,10 @@ import (
 var ErrNotDeployed = errors.New("app has not been deployed yet")
 
 func (s *Store) Apply(ctx context.Context, app App, image string) error {
+	return s.apply(ctx, app, image, false)
+}
+
+func (s *Store) apply(ctx context.Context, app App, image string, restart bool) error {
 	workload := BuildWorkload(app, s.Config, image, time.Now().UTC().Format(time.RFC3339))
 	namespace := s.Config.Namespace
 	if desired := workload.Deployment; desired != nil {
@@ -23,6 +28,9 @@ func (s *Store) Apply(ctx context.Context, app App, image string) error {
 		case apierrors.IsNotFound(err):
 			_, err = deployments.Create(ctx, desired, metav1.CreateOptions{})
 		case err == nil:
+			if !restart {
+				keepRestartedAt(&desired.Spec.Template, existing.Spec.Template)
+			}
 			existing.Spec = desired.Spec
 			_, err = deployments.Update(ctx, existing, metav1.UpdateOptions{})
 		}
@@ -37,6 +45,9 @@ func (s *Store) Apply(ctx context.Context, app App, image string) error {
 		case apierrors.IsNotFound(err):
 			_, err = cronJobs.Create(ctx, desired, metav1.CreateOptions{})
 		case err == nil:
+			if !restart {
+				keepRestartedAt(&desired.Spec.JobTemplate.Spec.Template, existing.Spec.JobTemplate.Spec.Template)
+			}
 			existing.Spec = desired.Spec
 			_, err = cronJobs.Update(ctx, existing, metav1.UpdateOptions{})
 		}
@@ -63,7 +74,13 @@ func (s *Store) Restart(ctx context.Context, app App) error {
 	if app.DeployedSHA == "" {
 		return nil
 	}
-	return s.Apply(ctx, app, ImageRef(s.Config.Registry, app.Name, app.DeployedSHA))
+	return s.apply(ctx, app, ImageRef(s.Config.Registry, app.Name, app.DeployedSHA), true)
+}
+
+func keepRestartedAt(desired *corev1.PodTemplateSpec, existing corev1.PodTemplateSpec) {
+	if stamp, ok := existing.Annotations[AnnotationRestartedAt]; ok {
+		desired.Annotations[AnnotationRestartedAt] = stamp
+	}
 }
 
 func (s *Store) RunNow(ctx context.Context, app App) (string, error) {
