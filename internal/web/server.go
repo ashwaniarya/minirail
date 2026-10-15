@@ -55,6 +55,7 @@ func (s *Server) Handler() http.Handler {
 	dashboard.HandleFunc("POST /apps/{name}/attach/postgres", s.appAction(s.attachPostgres))
 	dashboard.HandleFunc("POST /apps/{name}/attach/valkey", s.appAction(s.attachValkey))
 	dashboard.HandleFunc("POST /apps/{name}/delete", s.remove)
+	dashboard.HandleFunc("GET /apps/{name}/logs", s.logs)
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
@@ -93,7 +94,7 @@ func fail(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, errBadRequest):
 		http.Error(w, err.Error(), http.StatusBadRequest)
-	case errors.Is(err, apps.ErrNotFound):
+	case errors.Is(err, apps.ErrNotFound), errors.Is(err, errNoLogs):
 		http.Error(w, err.Error(), http.StatusNotFound)
 	case errors.Is(err, apps.ErrExists), errors.Is(err, apps.ErrNotDeployed):
 		http.Error(w, err.Error(), http.StatusConflict)
