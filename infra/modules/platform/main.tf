@@ -183,6 +183,16 @@ resource "kubernetes_deployment_v1" "minirail" {
             value = tostring(var.valkey_enabled)
           }
 
+          env {
+            name  = "MINIRAIL_SCHEME"
+            value = var.scheme
+          }
+
+          env {
+            name  = "MINIRAIL_REGISTRY_INSECURE"
+            value = tostring(var.registry_insecure)
+          }
+
           env_from {
             secret_ref {
               name = kubernetes_secret_v1.minirail.metadata[0].name

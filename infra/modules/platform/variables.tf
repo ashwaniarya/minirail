@@ -3,9 +3,26 @@ variable "apps_domain" {
   type        = string
 }
 
+variable "scheme" {
+  description = "Scheme of app, console and webhook links."
+  type        = string
+  default     = "https"
+
+  validation {
+    condition     = contains(["http", "https"], var.scheme)
+    error_message = "scheme must be http or https."
+  }
+}
+
 variable "registry_endpoint" {
   description = "Registry the control image and app images live in, without a trailing slash."
   type        = string
+}
+
+variable "registry_insecure" {
+  description = "Push app images to the registry over plain HTTP."
+  type        = bool
+  default     = false
 }
 
 variable "docker_config" {

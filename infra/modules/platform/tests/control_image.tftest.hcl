@@ -30,3 +30,25 @@ run "rejects_a_tag_in_place_of_a_digest" {
 
   expect_failures = [var.image_digest]
 }
+
+run "local_cluster_serves_http_and_pushes_to_a_plain_http_registry" {
+  command = plan
+
+  variables {
+    scheme            = "http"
+    registry_insecure = true
+  }
+
+  assert {
+    condition     = output.console_url == "http://console.apps.example.com"
+    error_message = "console link must follow the scheme"
+  }
+
+  assert {
+    condition = length(setintersection(
+      [for env in kubernetes_deployment_v1.minirail.spec[0].template[0].spec[0].container[0].env : "${env.name}=${env.value}"],
+      ["MINIRAIL_SCHEME=http", "MINIRAIL_REGISTRY_INSECURE=true"],
+    )) == 2
+    error_message = "control plane must get the scheme and the insecure registry flag"
+  }
+}
