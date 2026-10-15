@@ -21,7 +21,7 @@ Simple Railway clone: a thin Go control plane on DOKS, provisioned by Terraform,
 
 | # | Task | Branch | Commit | Status |
 |---|---|---|---|---|
-| 0 | GitHub repo and `main` | — | — | ⏸ gated |
+| 0 | Public GitHub repo, `main` and PR #1 | spec | 63ce7fb | 🟢 done |
 | 1 | Scaffold module, config loader and CI | feat/01-scaffold | 3738c58 | 🟢 done |
 | 2 | App model, validation and ConfigMap codec | feat/02-app-model | 8b95c3d | 🟢 done |
 | 3 | Workload manifests per app type | feat/03-manifests | 4d3a721 | 🟢 done |
@@ -46,19 +46,19 @@ Simple Railway clone: a thin Go control plane on DOKS, provisioned by Terraform,
 | I4 | Wait for containers before streaming logs | feat/18-log-wait | bae1436 | 🟢 done |
 | I2 | Control image by digest | feat/19-control-digest | 81cb032 | 🟢 done |
 | 20 | Track `tasks/` in git | docs/20-track-tasks | bfe95f0 | 🟢 done |
-| 21 | Open source: LICENSE (MIT) and README | docs/21-open-source | this commit | 🟢 done |
+| 21 | Open source: LICENSE (MIT) and README | docs/21-open-source | f90dac3 | 🟢 done |
 
 ## Blockers / open questions
 
-- Branches merged into `spec` locally. Next: create the public repo, push `spec`, open the PR to `main`.
-- Task 0, every push, every merge and `make up` (DO spend) need Arya's explicit OK. Arya exports tokens in their own shell.
+- `spec` merged into `main` through PR #1 (63ce7fb). Repo is public at github.com/ashwaniarya/minirail; default branch `main`.
+- Every merge and `make up` (DO spend) need Arya's explicit OK. Arya exports tokens in their own shell.
 
 ## Next steps
 
 Gated:
 
-- [ ] Task 0: create the GitHub repo and `main`
-- [ ] Push each branch and open stacked PRs
+- [x] Task 0: create the GitHub repo and `main`
+- [x] Push `spec` and open PR #1 (one PR for all 26 commits, merged as 63ce7fb)
 - [ ] First `make up` on DigitalOcean
 
 First `make up` risks (each is a small fix if it bites):
@@ -89,16 +89,17 @@ Deferred minors:
 
 ## Verify
 
-`make check` exits 0: go vet, go test (71/71), terraform fmt, then init, validate and test for both stages (platform 2/2). Last green on 81cb032.
+`make check` exits 0: go vet, go test (71/71), terraform fmt, then init, validate and test for both stages (platform 2/2). Last green on f90dac3, and CI passed on PR #1.
 
 
-## Git snapshot (auto, auto 16:37)
+
+## Git snapshot (auto, auto 16:45)
 
 ```
 branch: spec
+f90dac3 docs: open source under MIT with a README
 bfe95f0 docs: track task status in tasks/
 81cb032 fix(infra): run the control image by digest, not by mutable tag
-bae1436 fix(web): wait for each container to start before streaming logs
 ```
-Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_163756_auto.md
+Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_164521_auto.md
 <!-- /snapshot -->
