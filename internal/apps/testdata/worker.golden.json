@@ -11,13 +11,15 @@
       "replicas": 2,
       "selector": {
         "matchLabels": {
-          "paas/app": "hello"
+          "paas/app": "hello",
+          "paas/kind": "worker"
         }
       },
       "template": {
         "metadata": {
           "labels": {
-            "paas/app": "hello"
+            "paas/app": "hello",
+            "paas/kind": "worker"
           },
           "annotations": {
             "paas/restarted-at": "2026-10-15T00:00:00Z"

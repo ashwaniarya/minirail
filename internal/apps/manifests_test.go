@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -74,5 +76,28 @@ func TestValkeySecretOnlyWhenAttached(t *testing.T) {
 	envFrom = BuildWorkload(app, testConfig(), "image", "now").Deployment.Spec.Template.Spec.Containers[0].EnvFrom
 	if len(envFrom) != 3 || envFrom[2].SecretRef.Name != ValkeySecret {
 		t.Fatalf("attached app envFrom = %+v", envFrom)
+	}
+}
+
+func TestRuntimeSelectorsExcludeBuildPods(t *testing.T) {
+	buildPod := labels.Set{LabelApp: "hello", LabelKind: "build"}
+	worker := validWeb()
+	worker.Type = Worker
+	for _, app := range []App{validWeb(), worker} {
+		deployment := BuildWorkload(app, testConfig(), "image", "now").Deployment
+		selector := labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels)
+		if selector.Matches(buildPod) || !selector.Matches(labels.Set(deployment.Spec.Template.Labels)) {
+			t.Fatalf("%s deployment selector %v vs template %v", app.Type, selector, deployment.Spec.Template.Labels)
+		}
+	}
+	web := BuildWorkload(validWeb(), testConfig(), "image", "now")
+	service := labels.SelectorFromSet(web.Service.Spec.Selector)
+	if service.Matches(buildPod) || !service.Matches(labels.Set(web.Deployment.Spec.Template.Labels)) {
+		t.Fatalf("service selector %v must pick app pods only", service)
+	}
+	cronApp := validWeb()
+	cronApp.Type, cronApp.Schedule = Cron, "0 3 * * *"
+	if kind := BuildWorkload(cronApp, testConfig(), "image", "now").CronJob.Spec.JobTemplate.Spec.Template.Labels[LabelKind]; kind != "cron" {
+		t.Fatalf("cron pod kind = %q", kind)
 	}
 }

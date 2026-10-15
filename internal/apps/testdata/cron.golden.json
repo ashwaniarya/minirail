@@ -13,7 +13,8 @@
       "jobTemplate": {
         "metadata": {
           "labels": {
-            "paas/app": "hello"
+            "paas/app": "hello",
+            "paas/kind": "cron"
           }
         },
         "spec": {
@@ -21,7 +22,8 @@
           "template": {
             "metadata": {
               "labels": {
-                "paas/app": "hello"
+                "paas/app": "hello",
+                "paas/kind": "cron"
               },
               "annotations": {
                 "paas/restarted-at": "2026-10-15T00:00:00Z"

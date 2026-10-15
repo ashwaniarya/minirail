@@ -33,8 +33,10 @@ func Host(name, domain string) string { return name + "." + domain }
 
 func BuildWorkload(app App, config Config, image, restartedAt string) Workload {
 	meta := metav1.ObjectMeta{Name: app.Name, Namespace: config.Namespace, Labels: Labels(app.Name)}
+	podLabels := Labels(app.Name)
+	podLabels[LabelKind] = string(app.Type)
 	template := corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{Labels: Labels(app.Name), Annotations: map[string]string{AnnotationRestartedAt: restartedAt}},
+		ObjectMeta: metav1.ObjectMeta{Labels: podLabels, Annotations: map[string]string{AnnotationRestartedAt: restartedAt}},
 		Spec:       podSpec(app, image),
 	}
 	if app.Type == Cron {
@@ -45,7 +47,7 @@ func BuildWorkload(app App, config Config, image, restartedAt string) Workload {
 				Schedule:          app.Schedule,
 				ConcurrencyPolicy: batchv1.ForbidConcurrent,
 				JobTemplate: batchv1.JobTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{Labels: Labels(app.Name)},
+					ObjectMeta: metav1.ObjectMeta{Labels: podLabels},
 					Spec:       batchv1.JobSpec{BackoffLimit: ptr.To[int32](0), Template: template},
 				},
 			},
@@ -55,7 +57,7 @@ func BuildWorkload(app App, config Config, image, restartedAt string) Workload {
 		ObjectMeta: meta,
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(app.Replicas)),
-			Selector: &metav1.LabelSelector{MatchLabels: Labels(app.Name)},
+			Selector: &metav1.LabelSelector{MatchLabels: podLabels},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -70,7 +72,7 @@ func BuildWorkload(app App, config Config, image, restartedAt string) Workload {
 		workload.Service = &corev1.Service{
 			ObjectMeta: meta,
 			Spec: corev1.ServiceSpec{
-				Selector: Labels(app.Name),
+				Selector: podLabels,
 				Ports:    []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt32(int32(app.Port))}},
 			},
 		}
