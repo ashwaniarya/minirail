@@ -15,7 +15,7 @@ Simple Railway clone: a thin Go control plane on DOKS, provisioned by Terraform,
 - App types: web, worker, cron. App names are DNS-1035 labels (start with a letter).
 - Terraform in two stages: `infra/cloud`, then `infra/platform`.
 - Control image runs by digest, never by tag.
-- Stacked branches, one concern each. No remote yet.
+- Stacked branches, one concern each. Public repo, MIT license.
 
 ## State
 
@@ -45,11 +45,12 @@ Simple Railway clone: a thin Go control plane on DOKS, provisioned by Terraform,
 | I3 | DNS-1035 app names, restarted-at only on Restart | feat/17-dns1035-names | 2f528ae, 420e904 | 🟢 done |
 | I4 | Wait for containers before streaming logs | feat/18-log-wait | bae1436 | 🟢 done |
 | I2 | Control image by digest | feat/19-control-digest | 81cb032 | 🟢 done |
-| 20 | Track `tasks/` in git | docs/20-track-tasks | this commit | 🟢 done |
+| 20 | Track `tasks/` in git | docs/20-track-tasks | bfe95f0 | 🟢 done |
+| 21 | Open source: LICENSE (MIT) and README | docs/21-open-source | this commit | 🟢 done |
 
 ## Blockers / open questions
 
-- Finish choice owed by Arya: merge into `spec` locally, push and open PRs, or keep as-is.
+- Branches merged into `spec` locally. Next: create the public repo, push `spec`, open the PR to `main`.
 - Task 0, every push, every merge and `make up` (DO spend) need Arya's explicit OK. Arya exports tokens in their own shell.
 
 ## Next steps
@@ -90,14 +91,14 @@ Deferred minors:
 
 `make check` exits 0: go vet, go test (71/71), terraform fmt, then init, validate and test for both stages (platform 2/2). Last green on 81cb032.
 
-## Git snapshot (auto, auto 16:31)
+
+## Git snapshot (auto, auto 16:37)
 
 ```
-branch: feat/19-control-digest
-?? tasks/
+branch: spec
+bfe95f0 docs: track task status in tasks/
 81cb032 fix(infra): run the control image by digest, not by mutable tag
 bae1436 fix(web): wait for each container to start before streaming logs
-420e904 fix(apps): stamp restarted-at only on Restart
 ```
-Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_163136_auto.md
+Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_163756_auto.md
 <!-- /snapshot -->
