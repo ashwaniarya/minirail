@@ -49,6 +49,12 @@ func (s *Server) Handler() http.Handler {
 	dashboard.HandleFunc("GET /apps/new", s.newForm)
 	dashboard.HandleFunc("POST /apps/new", s.create)
 	dashboard.HandleFunc("GET /apps/{name}", s.detail)
+	dashboard.HandleFunc("POST /apps/{name}/env", s.appAction(s.saveEnv))
+	dashboard.HandleFunc("POST /apps/{name}/deploy", s.appAction(s.deploy))
+	dashboard.HandleFunc("POST /apps/{name}/run", s.appAction(s.run))
+	dashboard.HandleFunc("POST /apps/{name}/attach/postgres", s.appAction(s.attachPostgres))
+	dashboard.HandleFunc("POST /apps/{name}/attach/valkey", s.appAction(s.attachValkey))
+	dashboard.HandleFunc("POST /apps/{name}/delete", s.remove)
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
