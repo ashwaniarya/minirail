@@ -45,6 +45,9 @@ type Server struct {
 
 func (s *Server) Handler() http.Handler {
 	dashboard := http.NewServeMux()
+	dashboard.HandleFunc("GET /{$}", s.index)
+	dashboard.HandleFunc("GET /apps/new", s.newForm)
+	dashboard.HandleFunc("POST /apps/new", s.create)
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })

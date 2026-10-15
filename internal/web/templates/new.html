@@ -1,0 +1,19 @@
+{{define "content"}}
+<h1>New app</h1>
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+<form method="post" action="/apps/new">
+<p><label>Name <input name="name" value="{{.App.Name}}" required></label></p>
+<p><label>GitHub repo <input name="repo" value="{{.App.Repo}}" placeholder="https://github.com/owner/repo" required></label></p>
+<p><label>Branch <input name="branch" value="{{.App.Branch}}" required></label></p>
+<p><label>Root directory <input name="root" value="{{.App.Root}}"></label></p>
+<p><label>Type <select name="type">
+<option value="web"{{if eq .App.Type "web"}} selected{{end}}>web</option>
+<option value="worker"{{if eq .App.Type "worker"}} selected{{end}}>worker</option>
+<option value="cron"{{if eq .App.Type "cron"}} selected{{end}}>cron</option>
+</select></label></p>
+<p><label>Port (web) <input name="port" type="number" value="{{.App.Port}}"></label></p>
+<p><label>Replicas (web, worker) <input name="replicas" type="number" value="{{.App.Replicas}}"></label></p>
+<p><label>Schedule (cron) <input name="schedule" value="{{.App.Schedule}}" placeholder="*/15 * * * *"></label></p>
+<button>Create and deploy</button>
+</form>
+{{end}}

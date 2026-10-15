@@ -1,0 +1,19 @@
+{{define "content"}}
+<h1>Apps</h1>
+{{if .}}
+<table>
+<tr><th>Name</th><th>Type</th><th>URL</th><th>Deployed</th><th>Last build</th></tr>
+{{range .}}
+<tr>
+<td><a href="/apps/{{.App.Name}}">{{.App.Name}}</a></td>
+<td>{{.App.Type}}</td>
+<td>{{if .URL}}<a href="{{.URL}}">{{.URL}}</a>{{end}}</td>
+<td>{{short .App.DeployedSHA}}</td>
+<td>{{.LastBuild}}</td>
+</tr>
+{{end}}
+</table>
+{{else}}
+<p>No apps yet. <a href="/apps/new">Create one</a>.</p>
+{{end}}
+{{end}}
