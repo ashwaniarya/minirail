@@ -107,7 +107,7 @@ An app is a ConfigMap `<name>-app` in namespace `apps`, label `paas/app=<name>`,
 
 Env vars: Secret `<name>-env`. Database URL: Secret `<name>-db`, kept separate so editing env never clobbers it. Workloads load both via `envFrom`, plus `valkey` when attached.
 
-Name rule: DNS-1123 label, 1–30 chars, not `console`, `www` or `minirail`. Validated server-side before any object is created.
+Name rule: DNS-1035 label (starts with a letter, since it also names the Service), 1–30 chars, not `console`, `www` or `minirail`. Validated server-side before any object is created.
 
 ### 5.2 Workloads per type
 

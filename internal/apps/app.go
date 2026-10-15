@@ -45,7 +45,7 @@ type App struct {
 }
 
 var (
-	namePattern   = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+	namePattern   = regexp.MustCompile(`^[a-z]([-a-z0-9]*[a-z0-9])?$`)
 	repoPattern   = regexp.MustCompile(`^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 	branchPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 	rootPattern   = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
@@ -65,7 +65,7 @@ func DBSecretName(name string) string  { return name + "-db" }
 func (a App) Validate() error {
 	switch {
 	case len(a.Name) > 30 || !namePattern.MatchString(a.Name):
-		return errors.New("name must be 1-30 lowercase letters, digits or dashes, starting and ending with a letter or digit")
+		return errors.New("name must be 1-30 lowercase letters, digits or dashes, starting with a letter and ending with a letter or digit")
 	case slices.Contains(reservedNames, a.Name):
 		return fmt.Errorf("name %q is reserved", a.Name)
 	case !repoPattern.MatchString(a.Repo):

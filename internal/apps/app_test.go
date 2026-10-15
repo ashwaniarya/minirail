@@ -26,6 +26,7 @@ func TestValidateRejectsBadInput(t *testing.T) {
 	cases := map[string]func(*App){
 		"uppercase name":      func(a *App) { a.Name = "Hello" },
 		"leading dash name":   func(a *App) { a.Name = "-hello" },
+		"leading digit name":  func(a *App) { a.Name = "2048" },
 		"long name":           func(a *App) { a.Name = strings.Repeat("a", 31) },
 		"reserved name":       func(a *App) { a.Name = "console" },
 		"gitlab repo":         func(a *App) { a.Repo = "https://gitlab.com/acme/hello" },
