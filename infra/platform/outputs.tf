@@ -1,18 +1,18 @@
 output "console_url" {
-  value = "https://${local.console_host}"
+  value = module.platform.console_url
 }
 
 output "admin_password" {
-  value     = random_password.admin_password.result
+  value     = module.platform.admin_password
   sensitive = true
 }
 
 output "webhook_url" {
-  value = "https://${local.console_host}/webhook/github"
+  value = module.platform.webhook_url
 }
 
 output "webhook_secret" {
-  value     = random_password.webhook_secret.result
+  value     = module.platform.webhook_secret
   sensitive = true
 }
 

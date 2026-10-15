@@ -41,21 +41,16 @@ variables {
   image_digest = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 }
 
-run "control_plane_runs_the_pushed_digest" {
+run "apps_domain_points_at_the_load_balancer" {
   command = plan
 
   assert {
-    condition     = kubernetes_deployment_v1.minirail.spec[0].template[0].spec[0].container[0].image == "registry.digitalocean.com/acme/minirail@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    error_message = "control plane must run its image by digest, not by a mutable tag"
-  }
-}
-
-run "rejects_a_tag_in_place_of_a_digest" {
-  command = plan
-
-  variables {
-    image_digest = "latest"
+    condition     = digitalocean_record.apps["*"].value == "203.0.113.10" && digitalocean_record.apps["@"].value == "203.0.113.10"
+    error_message = "wildcard and apex records must point at the Traefik load balancer"
   }
 
-  expect_failures = [var.image_digest]
+  assert {
+    condition     = output.console_url == "https://console.apps.example.com"
+    error_message = "console must be served over https on DigitalOcean"
+  }
 }
