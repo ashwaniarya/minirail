@@ -58,6 +58,7 @@ func (s *Server) Handler() http.Handler {
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	root.HandleFunc("POST /webhook/github", s.webhook)
 	root.Handle("/", s.requireAdmin(http.NewCrossOriginProtection().Handler(dashboard)))
 	return http.MaxBytesHandler(root, maxBodyBytes)
 }
