@@ -47,6 +47,11 @@ Simple Railway clone: a thin Go control plane on DOKS, provisioned by Terraform,
 | I2 | Control image by digest | feat/19-control-digest | 81cb032 | 🟢 done |
 | 20 | Track `tasks/` in git | docs/20-track-tasks | bfe95f0 | 🟢 done |
 | 21 | Open source: LICENSE (MIT) and README | docs/21-open-source | f90dac3 | 🟢 done |
+| 23 | Control plane config: scheme and plain-http registry | feat/23-local-config | 3d095b2 | 🟢 done |
+| 24 | Multi-arch railpack build | feat/24-multiarch-railpack | 00f4598 | 🟢 done |
+| 25 | Platform stage as a reusable module | refactor/25-platform-module | 791de8c | 🟢 done |
+| 26 | Module flags for local clusters | feat/26-module-local-flags | 23761af | 🟢 done |
+| 27 | Local mode on k3d (`make local-up`) | feat/27-local-cluster | deed1ca, 4dd7f85 | 🟢 done, `make local-smoke` passed 2026-10-15 |
 
 ## Blockers / open questions
 
@@ -93,13 +98,21 @@ Deferred minors:
 
 
 
-## Git snapshot (auto, auto 16:45)
+
+
+
+
+
+## Git snapshot (auto, auto 17:34)
 
 ```
-branch: spec
-f90dac3 docs: open source under MIT with a README
-bfe95f0 docs: track task status in tasks/
-81cb032 fix(infra): run the control image by digest, not by mutable tag
+branch: feat/27-local-cluster
+ M tasks/minirail_handoff_2026-10-15.md
+?? infra/cloud/tasks/
+ 1 file changed, 15 insertions(+), 6 deletions(-)
+deed1ca feat: run the whole platform locally on k3d
+23761af feat: let the platform module serve http and push to a plain-http registry
+791de8c refactor: move the platform stage into a reusable module
 ```
-Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_164521_auto.md
+Full detail: /Users/arya/.claude/context-archive/minirail/2026-10-15_173440_auto.md
 <!-- /snapshot -->
