@@ -1,5 +1,5 @@
 output "console_url" {
-  value = "https://${local.console_host}"
+  value = "${var.scheme}://${local.console_host}"
 }
 
 output "admin_password" {
@@ -8,7 +8,7 @@ output "admin_password" {
 }
 
 output "webhook_url" {
-  value = "https://${local.console_host}/webhook/github"
+  value = "${var.scheme}://${local.console_host}/webhook/github"
 }
 
 output "webhook_secret" {
