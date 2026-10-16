@@ -21,6 +21,22 @@ GitHub push --webhook--> control plane (Go, on DOKS) --> BuildKit Job --> regist
 Browser --> DO load balancer (wildcard TLS) --> Traefik --> <app>.apps.<domain>
 ```
 
+## Try it locally
+
+Runs the whole platform on your machine with [k3d](https://k3d.io) (k3s in Docker), at no cost. Needs Docker with buildx and `k3d`. Builds run inside the cluster, so give Docker at least 8 GB of memory.
+
+```bash
+make local-up
+```
+
+The dashboard is at `http://console.localhost`, apps at `http://<app>.localhost` (Chrome and curl resolve `*.localhost`; Safari may not). Postgres runs in the cluster. There are no push webhooks locally: use the Deploy button. Set `TF_VAR_github_token` before `make local-up` only if you deploy private repos. Read the admin password with:
+
+```bash
+docker run --rm --network k3d-minirail -v "$PWD":/work -w /work/infra/local hashicorp/terraform:1.16.4 output -raw admin_password
+```
+
+`SMOKE_REPO=https://github.com/<owner>/minirail make local-smoke` runs the same end-to-end check as `make smoke`. `make local-down` deletes the cluster, the registry and the local state.
+
 ## Requirements
 
 - A DigitalOcean account and an API token with read and write scope.
@@ -73,7 +89,7 @@ This deletes everything `make up` created. If it fails on the certificate, run i
 make check
 ```
 
-Runs `go vet`, `go test`, `terraform fmt`, then `init`, `validate` and `test` for both stages. The design is in [`docs/superpowers/specs`](docs/superpowers/specs/).
+Runs `go vet`, `go test`, `terraform fmt`, then `init`, `validate` and `test` for every Terraform root and the shared module. The design is in [`docs/superpowers/specs`](docs/superpowers/specs/).
 
 ## License
 

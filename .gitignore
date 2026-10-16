@@ -2,3 +2,4 @@
 *.tfstate
 *.tfstate.*
 image.auto.tfvars.json
+kubeconfig.yaml
