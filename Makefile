@@ -9,7 +9,7 @@ check:
 	go vet ./...
 	go test ./...
 	docker run --rm -v "$(CURDIR)":/work -w /work $(TF_IMAGE) fmt -check -recursive infra
-	for stage in cloud platform; do \
+	for stage in cloud modules/platform platform; do \
 		$(call tf,$$stage) init -backend=false -input=false >/dev/null && $(call tf,$$stage) validate && $(call tf,$$stage) test || exit 1; \
 	done
 
