@@ -1,6 +1,7 @@
 package build
 
 import (
+	"strings"
 	"testing"
 
 	"minirail/internal/apps"
@@ -68,10 +69,26 @@ func TestNewJobWiresSourceImageAndCache(t *testing.T) {
 	if envValue(t, buildEnv, "IMAGE") != "registry.digitalocean.com/acme/hello:"+shaA {
 		t.Fatalf("image = %q", buildEnv["IMAGE"])
 	}
-	if envValue(t, buildEnv, "CACHE") != "registry.digitalocean.com/acme/hello:buildcache" || envValue(t, buildEnv, "ROOT") != "examples/hello" {
+	if envValue(t, buildEnv, "CACHE") != "registry.digitalocean.com/acme/hello:buildcache" || envValue(t, buildEnv, "ROOT") != "examples/hello" || envValue(t, buildEnv, "REGISTRY_OPTS") != "" {
 		t.Fatalf("build env = %v", buildEnv)
 	}
 	if build.Image != "moby/buildkit:v0.33.1-rootless" || *build.SecurityContext.RunAsUser != 1000 {
 		t.Fatalf("build container = %+v", build)
+	}
+}
+
+func TestNewJobUsesPlainHTTPForAnInsecureRegistry(t *testing.T) {
+	config := testConfig()
+	config.RegistryInsecure = true
+	build := NewJob(config, testApp(), shaA).Spec.Template.Spec.Containers[0]
+	buildEnv := map[string]string{}
+	for _, variable := range build.Env {
+		buildEnv[variable.Name] = variable.Value
+	}
+	if envValue(t, buildEnv, "REGISTRY_OPTS") != ",registry.insecure=true" {
+		t.Fatalf("build env = %v", buildEnv)
+	}
+	if strings.Count(buildScript, "$REGISTRY_OPTS") != 3 {
+		t.Fatal("push, cache export and cache import must all carry REGISTRY_OPTS")
 	}
 }
